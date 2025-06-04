@@ -45,13 +45,13 @@ PhenologyDandelion <- PhenologyCombined %>%
 
 #Pollinator visits
 
-Visits <- read_excel("Data/Visits2.xlsx")
+Visits <- read_excel("Data/Visits2.xlsx") %>% 
+  
 
 Visits2 <- Visits %>% 
   select(-Comment, -Weather) %>% 
   mutate_all(~replace(., is.na(.), 0)) %>% 
   mutate(Date = dmy(Date)) %>% 
-  mutate(Time = hms::parse_hm(Time)) %>% 
   filter(row_number() != 445) %>% 
   mutate(DOY = yday(Date))
 
@@ -102,6 +102,8 @@ ManualVis_per_flower <- Merged_data2 %>%
   )
 
 
+
+## Include time
 
 
 ManualVis_per_flower %>%
@@ -226,3 +228,26 @@ Visits_per_flower <- Merged_data %>%
     Visits_per_flower = N_visits / Total_Open) %>%
   ungroup() %>% 
   rename(Taxonomic_group = Taxanomic_group)
+
+
+
+
+# Other -------------------------------------------------------------------
+
+#Reuploading visits as a csv to get time correct
+
+Visits_other <- read.csv("Data/Visits2.csv")
+  
+  
+Visits2_other <- Visits_other %>% 
+  select(-Comment, -Weather) %>% 
+  mutate_all(~replace(., is.na(.), 0)) %>% 
+  mutate(Date = dmy(Date)) %>% 
+  filter(row_number() != 445) %>% 
+  mutate(DOY = yday(Date))
+
+Visits3a_other <- Visits2_other %>% 
+  select(-Other, -'Andrena.cineraria', -'Andrena.haemorrhoa', -'Bombus.pratorum', -'Andrena.sp', -'Bombus.sensu.stricto', -'Bombus.hypnorum', -'Lasioglossum.sp', -'Andrena.scotica', -'Andrena.nigroaena', - Hoverfly, -Fly) 
+
+Visits3_other <- Visits3a_other %>% 
+  pivot_longer(cols = Honeybee:Solitarybee, names_to = "Pollinator", values_to = "Count")

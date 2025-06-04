@@ -117,6 +117,100 @@ Visits_combined <- Visits3_combined %>%
 ggsave(Visits_combined, filename = "Figures/Visits_combined.jpeg", height = 8, width = 12)
 
 
+
+
+#Plot visitation against flowers
+
+newdata <- expand.grid(
+  NOpen = seq(1, max(ManualVis_per_flower$NOpen), length.out = 100),
+  Where = c("Tree", "Ground"),
+  Location = unique(ManualVis_per_flower$Location)
+)
+
+# Add offset for model
+newdata$offset <- log(newdata$NOpen)
+
+# Predict on the link (log) scale with SEs
+pred <- predict(ManualObsModel1d,
+                newdata = newdata,
+                type = "link",
+                se.fit = TRUE,
+                re.form = NA)
+
+# Add predictions and back-transform
+newdata$fit <- exp(pred$fit)
+newdata$lower <- exp(pred$fit - 1.96 * pred$se.fit)
+newdata$upper <- exp(pred$fit + 1.96 * pred$se.fit)
+# Plot
+AppleDandelion <- ggplot() +
+  geom_ribbon(data = newdata, 
+              aes(x = NOpen, ymin = lower, ymax = upper, fill = Where), 
+              alpha = 0.3) +
+  geom_line(data = newdata, 
+            aes(x = NOpen, y = fit, color = Where), 
+            size = 1.2) +
+  geom_point(data = ManualVis_per_flower, 
+             aes(x = NOpen, y = N_visits, color = Where), 
+             alpha = 0.5, position = position_jitter(width = 2, height = 0.2)) +
+  scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
+  scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
+  labs(x = "Number of open apple flowers",
+       y = "Number of pollinator visits",
+       color = "",
+       fill = "") +
+  facet_wrap(~ Location) +
+  theme_minimal(base_size = 14)
+
+ggsave("Figures/AppleDandelion.png", plot = AppleDandelion, width = 10, height = 6, dpi = 300)
+
+
+
+
+###### DOY
+newdata <- expand.grid(
+  DOY = seq(min(ManualVis_per_flower$DOY), max(ManualVis_per_flower$DOY), length.out = 100),
+  Where = c("Tree", "Ground"),
+  NOpen = mean(ManualVis_per_flower$NOpen)  # or median
+)
+
+# Add offset
+newdata$offset <- log(newdata$NOpen)
+
+# Predict on the link (log) scale, exclude random effects (re.form = NA)
+pred <- predict(ManualObsModel3b,
+                newdata = newdata,
+                type = "link",
+                se.fit = TRUE,
+                re.form = NA)
+
+# Add predictions to newdata and back-transform
+newdata$fit <- exp(pred$fit)
+newdata$lower <- exp(pred$fit - 1.96 * pred$se.fit)
+newdata$upper <- exp(pred$fit + 1.96 * pred$se.fit)
+
+# Plot
+VisitsDOY <- ggplot(newdata, aes(x = DOY, y = fit, color = Where, fill = Where)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = NA) +
+  geom_line(size = 1.2) +
+  geom_point(data = ManualVis_per_flower, 
+             aes(x = DOY, y = N_visits, color = Where), 
+             alpha = 0.5, position = position_jitter(width = 0.2, height = 0.1)) +
+  labs(x = "Day of year (DOY)", y = "Number of pollinator visits per 5 min observation",
+       color = "", fill = "") +
+  theme_minimal(base_size = 14) +
+  scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
+  scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
+  scale_x_continuous(breaks = seq(min(newdata$DOY), max(newdata$DOY), by = 1)) +
+  ylim(0,5)
+
+
+ggsave("Figures/VisitsDOY.png", plot = VisitsDOY, width = 10, height = 6, dpi = 300)
+
+
+
+
+
+
 # Q2: Are some taxanomic groups only attracted to apple or dandelions --------
 
 SpeciesVisit <- Visits4_summarised %>% 
