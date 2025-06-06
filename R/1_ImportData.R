@@ -45,7 +45,7 @@ PhenologyDandelion <- PhenologyCombined %>%
 
 #Pollinator visits
 
-Visits <- read_excel("Data/Visits2.xlsx") %>% 
+Visits <- read_excel("Data/Visits2.xlsx")  
   
 
 Visits2 <- Visits %>% 
@@ -250,4 +250,34 @@ Visits3a_other <- Visits2_other %>%
   select(-Other, -'Andrena.cineraria', -'Andrena.haemorrhoa', -'Bombus.pratorum', -'Andrena.sp', -'Bombus.sensu.stricto', -'Bombus.hypnorum', -'Lasioglossum.sp', -'Andrena.scotica', -'Andrena.nigroaena', - Hoverfly, -Fly) 
 
 Visits3_other <- Visits3a_other %>% 
-  pivot_longer(cols = Honeybee:Solitarybee, names_to = "Pollinator", values_to = "Count")
+  pivot_longer(cols = Honeybee:Solitarybee, names_to = "Pollinator", values_to = "Count") %>% 
+  mutate(Time_parsed = as.POSIXct(paste("2000-01-01", Time), format = "%Y-%m-%d %H:%M"), Time_rounded = format(round_date(Time_parsed, unit = "hour"), "%H:%M")) %>% 
+  select(-Time_parsed)
+
+
+Visits24_plot <- Visits24 %>% 
+  mutate(Time_parsed = as.POSIXct(paste("2000-01-01", Time), format = "%Y-%m-%d %H:%M"), Time_rounded = format(round_date(Time_parsed, unit = "hour"), "%H:%M")) %>% 
+  select(-Time_parsed)
+
+
+
+Visits24_DOY <- Visits24_plot %>% 
+  group_by(Tree, Location, Apple_variety, DOY, Taxanomic_group) %>%
+  summarise(n = n(), .groups = "drop") %>% 
+  filter(Taxanomic_group != 'Unknown')
+  
+
+
+
+Visits24_Time <- Visits24_plot %>%
+  group_by(Tree, Location, Apple_variety, Time_rounded, Taxanomic_group) %>%
+  summarise(n = n(), .groups = "drop") %>% 
+  mutate(Hour = hour(hm(Time_rounded))) %>% 
+  filter(Taxanomic_group != 'Unknown')
+
+
+
+Visits24_Temp <- Visits24_plot %>% 
+  group_by(Tree, Location, Apple_variety, Temperature, Taxanomic_group) %>%
+  summarise(n = n(), .groups = "drop") %>% 
+  filter(Taxanomic_group != 'Unknown')
