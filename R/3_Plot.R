@@ -2,7 +2,6 @@ source("R/2_Analysis.R")
 
 
 #Packages
-library(ggplot2)
 library(ggeffects)
 library(ggridges)
 library(ggpubr)
@@ -45,7 +44,7 @@ PhenoManObs <- PhenologyDandelion %>%
               geom = "line",
               fullrange = TRUE,
               size = 1.1, se = FALSE) +
-  labs(x = "Day of the year (DOY)", y = "Number of open flowers per\nor two branches of apples or\nor 1x1 m plot of dandelions") +
+  labs(x = "Day of the year (DOY)", y = "Number of open flowers") +
   scale_x_continuous(breaks = seq(min(PhenologyDandelion$DOY), max(PhenologyDandelion$DOY), by = 1)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -72,7 +71,7 @@ PolliManObs <- Visits3 %>%
               method.args = list(family = gaussian(link = "log")),
               geom = "line",
               size = 1.1, se = FALSE) +
-  labs(x = "Day of the year (DOY)", y = "Number of pollinator visits per\nor 5 min observation", color = "Observation", title = "") +
+  labs(x = "Day of the year (DOY)", y = "Number of pollinator visits", color = "Observation", title = "") +
   theme_minimal() +
   scale_x_continuous(limits = c(min(PhenologyDandelion$DOY), max(PhenologyDandelion$DOY)),
                      breaks = sort(unique(c(seq(min(PhenologyDandelion$DOY), max(PhenologyDandelion$DOY), by = 1), 131, 142)))) +
@@ -114,6 +113,7 @@ Visits_combined <- Visits3_combined %>%
   ggtitle("Percentage of visits") + 
   theme(plot.title = element_text(hjust = 0.5)) +
   facet_wrap(~ Period, scales = "free_x")
+
 ggsave(Visits_combined, filename = "Figures/Visits_combined.jpeg", height = 8, width = 12)
 
 
@@ -124,24 +124,20 @@ ggsave(Visits_combined, filename = "Figures/Visits_combined.jpeg", height = 8, w
 newdata <- expand.grid(
   NOpen = seq(1, max(ManualVis_per_flower$NOpen), length.out = 100),
   Where = c("Tree", "Ground"),
-  Location = unique(ManualVis_per_flower$Location)
-)
+  Location = unique(ManualVis_per_flower$Location))
 
-# Add offset for model
 newdata$offset <- log(newdata$NOpen)
 
-# Predict on the link (log) scale with SEs
-pred <- predict(ManualObsModel1d,
+pred <- predict(ManualObsModel1a,
                 newdata = newdata,
                 type = "link",
                 se.fit = TRUE,
                 re.form = NA)
 
-# Add predictions and back-transform
 newdata$fit <- exp(pred$fit)
 newdata$lower <- exp(pred$fit - 1.96 * pred$se.fit)
 newdata$upper <- exp(pred$fit + 1.96 * pred$se.fit)
-# Plot
+
 AppleDandelion <- ggplot() +
   geom_ribbon(data = newdata, 
               aes(x = NOpen, ymin = lower, ymax = upper, fill = Where), 
@@ -152,14 +148,17 @@ AppleDandelion <- ggplot() +
   geom_point(data = ManualVis_per_flower, 
              aes(x = NOpen, y = N_visits, color = Where), 
              alpha = 0.5, position = position_jitter(width = 2, height = 0.2)) +
-  scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
-  scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
-  labs(x = "Number of open apple flowers",
-       y = "Number of pollinator visits",
+  scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
+                     labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
+  scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
+                    labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
+  labs(x = "Number of open flowers",
+       y = "Predicted number of pollinator visits",
        color = "",
        fill = "") +
   facet_wrap(~ Location) +
-  theme_minimal(base_size = 14)
+  theme_minimal(base_size = 14) +
+  theme(strip.text = element_text(face = "bold"))
 
 ggsave("Figures/AppleDandelion.png", plot = AppleDandelion, width = 10, height = 6, dpi = 300)
 
@@ -192,14 +191,16 @@ newdata$upper <- exp(pred$fit + 1.96 * pred$se.fit)
 VisitsDOY <- ggplot(newdata, aes(x = DOY, y = fit, color = Where, fill = Where)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = NA) +
   geom_line(size = 1.2) +
-  geom_point(data = ManualVis_per_flower, 
-             aes(x = DOY, y = N_visits, color = Where), 
+  geom_point(data = ManualVis_per_flower,
+             aes(x = DOY, y = N_visits, color = Where),
              alpha = 0.5, position = position_jitter(width = 0.2, height = 0.1)) +
-  labs(x = "Day of year (DOY)", y = "Number of pollinator visits per 5 min observation",
+  labs(x = "Day of the year (DOY)", y = "Number of pollinator visits per observation",
        color = "", fill = "") +
   theme_minimal(base_size = 14) +
-  scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
-  scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966")) +
+  scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
+                     labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
+  scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
+                    labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
   scale_x_continuous(breaks = seq(min(newdata$DOY), max(newdata$DOY), by = 1)) +
   ylim(0,5)
 
@@ -233,24 +234,6 @@ SpeciesVisit <- Visits4_summarised %>%
 ggsave(SpeciesVisit, filename = "Figures/SpeciesVisit.jpeg", height = 8, width = 13)
 
 
-GenusVisit <- Visits3 %>% 
-  ggplot(aes(y = Count, x = Pollinator, fill = Type)) + 
-  geom_col(position = position_dodge()) +
-  scale_fill_manual(name = "",
-                    values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
-                    labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
-  theme_minimal() +
-  labs(title = NULL,
-       x = "",
-       y = "Total number") +
-  ggtitle("") + 
-  theme(plot.title = element_text(hjust = 1),
-        axis.text.x = element_text(angle = 45, hjust = 1, size = 16, face = "italic"),
-        axis.title.y = element_text(size = 15),
-        legend.text = element_text(size = 16))
-
-ggsave(GenusVisit, filename = "Figures/GenusVisit.jpeg", height = 8, width = 13)
-
 
 # Plot from model output
 emm <- emmeans(ManualObsModel2b, ~ Where * Pollinator)
@@ -264,7 +247,7 @@ GenusModel2 <- ggplot(emm_df, aes(x = Pollinator, y = response, fill = Where)) +
   geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
                 position = position_dodge(width = 0.8), width = 0.2) +
   labs(
-    y = "Estimated number of visits per flower",
+    y = "Predicted number of pollinator visits per flower",
     x = "",
     fill = "Pollinator"
   ) +
@@ -282,13 +265,15 @@ ggsave(GenusModel2, filename = "Figures/GenusModel2.jpeg", height = 8, width = 1
 
 # Q3: What effect does mowing have on pollinator visitations? -------------
 
+
 newdata <- expand.grid(
   Total_Open = seq(1, 221, by = 5),
-  Apple_variety = c("Discovery", "Summerred"))
+  Apple_variety = c("Discovery", "Summerred"),
+  Taxonomic_group = "Honeybee")
 
 newdata$log_Total_Open <- log(newdata$Total_Open)
 
-pred <- predict(Model3, 
+pred <- predict(Model2b, 
                 newdata = newdata, 
                 type = "link", 
                 se.fit = TRUE, 
@@ -315,13 +300,13 @@ MowingProject <- ggplot() +
   scale_color_manual(values = c("Mowing" = "#669999", "No mowing" = "#7F646C")) +
   scale_fill_manual(values = c("Mowing" = "#669999", "No mowing" = "#7F646C")) +
   labs(x = "Number of open apple flowers",
-       y = "Number of pollinator visits",
+       y = "Predicted number of pollinator visits",
        color = "",
        fill = "") +
   theme_minimal(base_size = 14)
 
-ggsave("Figures/MowingProject_plot.png", plot = MowingProject, width = 10, height = 8, dpi = 300)
 
+ggsave("Figures/MowingProject_plot.png", plot = MowingProject, width = 10, height = 8, dpi = 300)
 
 
 #Dandelion: #CC9966, Discovery: #669999, Summerred: #7F646C
@@ -351,7 +336,7 @@ Pheno_mowing <- Phenology24 %>%
   scale_fill_manual(values = c("Mowing" = "#669999", "No mowing" = "#7F646C")) +
   scale_color_manual(values = c("Mowing" = "#669999", "No mowing" = "#7F646C")) +
   scale_x_continuous(breaks = seq(min(Phenology24$DOY), max(Phenology24$DOY), by = 1)) +
-  labs(x = "Day of year (DOY)", y = "Number of open flowers", color = "", fill = "") +
+  labs(x = "Day of the year (DOY)", y = "Number of open flowers", color = "", fill = "") +
   theme_minimal(base_size = 14)
 
 ggsave("Figures/Pheno_mowing.png", plot = Pheno_mowing, width = 10, height = 8, dpi = 300)
@@ -363,17 +348,38 @@ ggsave("Figures/MowingTreatment.png", plot = MowingTreatment, width = 10, height
 
 # Extra -------------------------------------------------------------------
 
-FlowersLocation <- ManualVis_per_flower %>% 
-  ggplot(aes(x = Where, y = NOpen, color = Where, fill = Where)) +
-  geom_col() +
-  scale_color_manual(name = "",
-                     values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
-                     labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
+
+GenusModel2 <- ggplot(emm_df, aes(x = Pollinator, y = response, fill = Where)) +
+  geom_col(position = position_dodge(width = 0.8)) +
+  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
+                position = position_dodge(width = 0.8), width = 0.2) +
+  labs(
+    y = "Predicted number of pollinator visits per flower",
+    x = "",
+    fill = "Pollinator"
+  ) +
   scale_fill_manual(name = "",
                     values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
                     labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
   theme_minimal() +
-  labs(x = "", y = "Number of open flowers") +
+  theme(plot.title = element_text(hjust = 1),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 16),
+        axis.title.y = element_text(size = 15),
+        legend.text = element_text(size = 16))
+
+
+emm <- emmeans(ModelFlower, ~ Where * Location)
+emm_df <- summary(emm, type = "response")
+
+FlowersLocation <- ggplot(emm_df, aes(x = Where, y = response, fill = Where)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
+                position = position_dodge(width = 0.8), width = 0.2) +
+  scale_fill_manual(name = "",
+                    values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
+                    labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
+  theme_minimal() +
+  labs(x = "", y = "Predicted number of open flowers per observation") +
   theme(axis.text.x = element_blank(),
         strip.text = element_text(face = "bold")) +
   facet_wrap(~ Location,
