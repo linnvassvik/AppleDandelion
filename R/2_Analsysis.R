@@ -13,41 +13,22 @@ library(emmeans)
 
 #Difference in visits/flower during apple flowering
 
-ManualObsModel1a <- glmmTMB(N_visits ~ Where + (1 | Location),
-                           offset = log(NOpen),
-                           family = nbinom2,
-                           data = ManualVis_per_flower)
-
-ManualObsModel1b <- glmmTMB(N_visits ~ Where + Location + (1 | Location),
+ManualObsModel1a <- glmmTMB(N_visits ~ Where + Location,
                             offset = log(NOpen),
                             family = nbinom2,
                             data = ManualVis_per_flower)
 
-ManualObsModel1c <- glmmTMB(N_visits ~ Where * Location + (1 | Location),
+ManualObsModel1b <- glmmTMB(N_visits ~ Where * Location,
                             offset = log(NOpen),
                             family = nbinom2,
                             data = ManualVis_per_flower)
 
-ManualObsModel1d <- glmmTMB(N_visits ~ Where + Location,
-                            offset = log(NOpen),
-                            family = nbinom2,
-                            data = ManualVis_per_flower)
+anova(ManualObsModel1d, ManualObsModel1e)
 
-ManualObsModel1e <- glmmTMB(N_visits ~ Where * Location,
-                            offset = log(NOpen),
-                            family = nbinom2,
-                            data = ManualVis_per_flower)
 
-AIC(ManualObsModel1a, ManualObsModel1b, ManualObsModel1c, ManualObsModel1d, ManualObsModel1e) #Model1d lowest AIC, but less than 2 between 1b. Interaction not significant
-
-summary(ManualObsModel1d)
+summary(ManualObsModel1e)
 emmeans(ManualObsModel1d, pairwise ~ Location)
 
-
-ManualObsModel2b <- glmmTMB(N_visits ~ Where * Pollinator + (1 | Location),
-                            offset = log(NOpen),
-                            family = nbinom2,
-                            data = ManualVis_per_flower)
 
 
 ## DOY 
@@ -86,7 +67,31 @@ emmeans(ManualObsModel3b, pairwise ~ Where | DOY, at = list(DOY = 135:142))
 
 
 
-## Split by pollinator
+
+
+# Q2: Are some taxanomic groups only attracted to apple or dandelions --------
+
+#Test for different groups of pollinators (bumblebees, honeybees and solitary bees), not enough data on species
+ManualObsModel2b <- glmmTMB(N_visits ~ Where * Pollinator + (1 | Location),
+                            offset = log(NOpen),
+                            family = nbinom2,
+                            data = ManualVis_per_flower)
+
+emmeans(ManualObsModel2b, pairwise ~ Pollinator)
+
+ManualObsModel2c <- glmmTMB(N_visits ~ Location + Pollinator,
+                            offset = log(NOpen),
+                            family = nbinom2,
+                            data = ManualVis_per_flower)
+
+emm <- emmeans(ManualObsModel2c, ~ Location * Pollinator, type = "response")
+pairs(emm)
+
+summary(ManualObsModel2c)
+
+
+
+##NOT USED IN PAPER
 BB_visit <- ManualVis_per_flower %>% 
   filter(Pollinator == 'Bumblebee')
 
@@ -112,40 +117,19 @@ ManualObsModel4c <- glmmTMB(N_visits ~ Where * Location + (1 | Location),
                             data = SB_visit)
 
 
-summary(ManualObsModel3c)
+summary(ManualObsModel5)
 check_model(ManualObsModel1) #not great, but not bad
 
-emmeans(ManualObsModel3b, pairwise ~ Location)
+emmeans(ManualObsModel5, pairwise ~ Pollinator)
 
 
-
-
-# Q2: Are some taxanomic groups only attracted to apple or dandelions --------
-
-#Test for different groups of pollinators (bumblebees, honeybees and solitary bees), not enough data on species
-ModelVisit2 <- glmmTMB(Count ~ Type * Pollinator + (1 | Location),
-                       family = nbinom2,
-                       data = Visits3)
-
-summary(ModelVisit2)
-check_model(ModelVisit2)
-
-emmeans(ModelVisit2, pairwise ~ Type * Pollinator)
-emmeans(ModelVisit2, pairwise ~ Pollinator)
-
+ManualObsModel5 <- glmmTMB(N_visits ~ Pollinator,
+                           offset = log(NOpen),
+                           family = nbinom2,
+                           data = ManualVis_per_flower)
 
 
 # Q3: What effect does mowing have on pollinator visitations? -------------
-
-Model1 <- glmmTMB(N_visits ~ Apple_variety + (1 | Location),
-                  offset = log(Total_Open),
-                  family = nbinom2,
-                  data = Visits_per_flower)
-
-
-summary(Model1)
-check_model(Model1)
-
 
 
 Model2 <- glmmTMB(N_visits ~ Apple_variety * Taxonomic_group + (1 | Location),
@@ -153,12 +137,7 @@ Model2 <- glmmTMB(N_visits ~ Apple_variety * Taxonomic_group + (1 | Location),
                   family = nbinom2,
                   data = Visits_per_flower)
 
-Model3 <- glmmTMB(N_visits ~ Apple_variety + (1 | Location),
-                  offset = log(Total_Open),
-                  family = nbinom2,
-                  data = Visits_per_flower)
-
-Model4 <- glmmTMB(N_visits ~ Taxonomic_group + (1 | Location),
+Model2b <- glmmTMB(N_visits ~ Apple_variety + Taxonomic_group + (1 | Location),
                   offset = log(Total_Open),
                   family = nbinom2,
                   data = Visits_per_flower)
@@ -172,17 +151,70 @@ emmeans(Model2, pairwise ~ Taxonomic_group)
 
 
 
+# General stats -----------------------------------------------------------
+
+ManualVis_per_flower %>% 
+  group_by(Where, Pollinator) %>% 
+  summarise(Total_visits = sum(N_visits)) %>% 
+  ungroup()
+
+ManualVis_per_flower %>% 
+  group_by(Where, Pollinator) %>% 
+  summarise(Total_flowers = sum(NOpen)) %>% 
+  ungroup()
+
+
+
+ManualVis_per_flower %>% 
+  group_by(Where, Location) %>% 
+  summarise(Total_flowers = sum(NOpen)) %>% 
+  ungroup()
+
+
+ManualVis_per_flower %>% 
+  group_by(Location, Pollinator) %>% 
+  summarise(Total_visits = sum(N_visits)) %>% 
+  ungroup()
+
+
+
+ModelFlower <- glmmTMB(NOpen ~ Where * Location,
+                        family = nbinom2,
+                        data = ManualVis_per_flower)
+
+
+
+summary(ModelPollinators)
+emmeans(ModelPollinators, pairwise ~ Pollinator * Location)
+
 # Additional --------------------------------------------------------------
 
-VisitsDOY <- glmmTMB(N_visits ~ Where * DOY + (1 | Location),
-                            family = nbinom2,
-                            data = ManualVis_per_flower)
-summary(VisitsDOY)
+VisitsDOY <- glmmTMB(n ~ DOY * Taxanomic_group,
+                      family = nbinom2,
+                      data = Visits24_DOY)
 
-VisitsDOY <- glmmTMB(N_visits ~ Where * DOY + (1 | Location),
+VisitsDOY2 <- glmmTMB(n ~ DOY * Taxanomic_group + (1 | Location),
                      family = nbinom2,
-                     data = ManualVis_per_flower)
-summary(VisitsDOY)
+                     data = Visits24_DOY)
+
+summary(VisitsDOY2)
+check_model(VisitsDOY)
+
+
+VisitsTime <- glmmTMB(n ~ Hour * Taxanomic_group + (1 | Location),
+                      family = nbinom2,
+                      data = Visits24_Time)
+
+summary(VisitsTime)
+check_model(VisitsTime)
 
 
 
+VisitsTemp <- glmmTMB(n ~ Temperature * Taxanomic_group + (1 | Location),
+                      family = nbinom2,
+                      data = Visits24_Temp)
+
+
+
+summary(VisitsTemp)
+check_model(VisitsTemp)
