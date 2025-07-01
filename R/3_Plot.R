@@ -561,3 +561,7 @@ Visits_per_flower %>%
 # Activity_Camera <- ggarrange(DOYActivity, TimeActivity, TempActivity, nrow = 3, common.legend = TRUE, legend = "bottom", labels = c("a", "b", "C"), label.y = 1.07, label.x = 0.02)
 # 
 # ggsave("Figures/Activity_Camera.png", plot = Activity_Camera, width = 10, height = 10, dpi = 300)
+
+
+
+

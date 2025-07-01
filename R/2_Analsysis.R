@@ -5,6 +5,7 @@ source("R/1_ImportData.R")
 library(glmmTMB)
 library(performance)
 library(emmeans)
+library(gtsummary)
 
 
 
@@ -20,11 +21,13 @@ ModelFlower <- glmmTMB(NOpen ~ Where * Location,
 
 
 summary(ModelFlower)
+tbl_regression(ModelFlower)
+
 
 emm <- emmeans(ModelFlower, ~ Where * Location)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
-
+tbl_regression(pairwise_comparisons)
 
 #Difference in visits/flower during apple flowering
 
@@ -34,7 +37,7 @@ ManualObsModel1a <- glmmTMB(N_visits ~ Where + Location,
                             data = ManualVis_per_flower)
 
 
-summary(ManualObsModel1e)
+summary(ManualObsModel1a)
 
 emm <- emmeans(ManualObsModel1a, ~ Location)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
@@ -59,6 +62,7 @@ ManualObsModel3b <- glmmTMB(N_visits ~ Where * DOY,
                            offset = log(NOpen),
                            family = nbinom2,
                            data = ManualVis_per_flower)
+
 
 
 summary(ManualObsModel3b)
@@ -109,11 +113,10 @@ Model2b <- glmmTMB(N_visits ~ Apple_variety + Taxonomic_group + (1 | Location),
                   data = Visits_per_flower)
 
 
-
 summary(Model2b)
 check_model(Model2)
 
-emm <- emmeans(Model2b, ~ Taxonomic_group)
+emm <- emmeans(Model2c, ~ Apple_variety * Taxonomic_group)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
 
