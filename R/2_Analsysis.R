@@ -179,3 +179,7 @@ ManualVis_per_flower %>%
 # 
 # summary(VisitsTemp)
 # check_model(VisitsTemp)
+
+
+
+
