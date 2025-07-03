@@ -39,7 +39,7 @@ ManualObsModel1a <- glmmTMB(N_visits ~ Where + Location,
 
 summary(ManualObsModel1a)
 
-emm <- emmeans(ManualObsModel1a, ~ Location)
+emm <- emmeans(ManualObsModel1a, ~ Where * Location)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
 
@@ -47,10 +47,10 @@ summary(pairwise_comparisons)
 
 ## DOY 
 
-## Make DOY a smaller number
+# Make DOY a smaller number
 # ManualVis_per_flower <- ManualVis_per_flower %>%
-#   mutate(DOY_c = scale(DOY, center = TRUE, scale = FALSE))  # Center only
-# 
+#   mutate(DOY_c = scale(DOY, center = TRUE, scale = FALSE))  
+
 # ManualObsModel3c <- glmmTMB(N_visits ~ Where * (DOY_c + I(DOY_c^2)) + (1 | Location),
 #                             offset = log(NOpen),
 #                             family = nbinom2,
@@ -65,7 +65,7 @@ ManualObsModel3b <- glmmTMB(N_visits ~ Where * DOY,
 
 
 
-summary(ManualObsModel3b)
+summary(ManualObsModel3c)
 check_model(ManualObsModel3b)
 
 
@@ -179,7 +179,5 @@ ManualVis_per_flower %>%
 # 
 # summary(VisitsTemp)
 # check_model(VisitsTemp)
-
-
 
 
