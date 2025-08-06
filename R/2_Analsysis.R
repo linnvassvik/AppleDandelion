@@ -39,7 +39,7 @@ ManualObsModel1a <- glmmTMB(N_visits ~ Where + Location,
 
 summary(ManualObsModel1a)
 
-emm <- emmeans(ManualObsModel1a, ~ Where * Location)
+emm <- emmeans(ManualObsModel1a, ~ Location)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
 
@@ -65,7 +65,7 @@ ManualObsModel3b <- glmmTMB(N_visits ~ Where * DOY,
 
 
 
-summary(ManualObsModel3c)
+summary(ManualObsModel3b)
 check_model(ManualObsModel3b)
 
 
@@ -76,7 +76,7 @@ summary(pairwise_comparisons)
 
 
 
-# Q2: Are some taxanomic groups only attracted to apple or dandelions --------
+# Q3: Are some taxanomic groups only attracted to apple or dandelions --------
 
 #Test for different groups of pollinators (bumblebees, honeybees and solitary bees), not enough data on species
 ManualObsModel2b <- glmmTMB(N_visits ~ Where * Pollinator + (1 | Location),
@@ -84,14 +84,14 @@ ManualObsModel2b <- glmmTMB(N_visits ~ Where * Pollinator + (1 | Location),
                             family = nbinom2,
                             data = ManualVis_per_flower)
 
-summary(ManualObsModel2c)
+summary(ManualObsModel2b)
 
-emm <- emmeans(ManualObsModel2b, ~ Where * Pollinator)
+emm <- emmeans(ManualObsModel2b, ~ Where * Pollinator, at = list(NOpen = 1), type = "response")
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
 
-
-# ManualObsModel2c <- glmmTMB(N_visits ~ Location + Pollinator,
+# 
+# ManualObsModel2c <- glmmTMB(N_visits ~ Location * Pollinator,
 #                             offset = log(NOpen),
 #                             family = nbinom2,
 #                             data = ManualVis_per_flower)
@@ -99,13 +99,13 @@ summary(pairwise_comparisons)
 # 
 # 
 # 
-# emm <- emmeans(ManualObsModel2c, ~ Location + Pollinator)
+# emm <- emmeans(ManualObsModel2c, ~ Location * Pollinator)
 # pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 # summary(pairwise_comparisons)
-# 
+# # 
 # 
 
-# Q3: What effect does mowing have on pollinator visitations? -------------
+# Q2: What effect does mowing have on pollinator visitations? -------------
 
 Model2b <- glmmTMB(N_visits ~ Apple_variety + Taxonomic_group + (1 | Location),
                   offset = log(Total_Open),
@@ -116,7 +116,7 @@ Model2b <- glmmTMB(N_visits ~ Apple_variety + Taxonomic_group + (1 | Location),
 summary(Model2b)
 check_model(Model2)
 
-emm <- emmeans(Model2c, ~ Apple_variety * Taxonomic_group)
+emm <- emmeans(Model2b, ~ Taxonomic_group)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
 

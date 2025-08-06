@@ -58,7 +58,6 @@ PhenoManObs <- PhenologyDandelion %>%
 
 
 
-
 PolliManObs <- Visits3 %>% 
   ggplot(aes(x = DOY, y = Count, color = Type, fill = Type)) +
   stat_smooth(method = "gam",
@@ -194,7 +193,7 @@ VisitsDOY <- ggplot(newdata, aes(x = DOY, y = fit, color = Where, fill = Where))
   geom_point(data = ManualVis_per_flower,
              aes(x = DOY, y = N_visits, color = Where),
              alpha = 0.5, position = position_jitter(width = 0.2, height = 0.1)) +
-  labs(x = "Day of the year (DOY)", y = "Number of pollinator visits per observation",
+  labs(x = "Day of the year (DOY)", y = "Predicted number of pollinator visits",
        color = "", fill = "") +
   theme_minimal(base_size = 14) +
   scale_color_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
@@ -202,7 +201,7 @@ VisitsDOY <- ggplot(newdata, aes(x = DOY, y = fit, color = Where, fill = Where))
   scale_fill_manual(values = c("Tree" = "#7F646C", "Ground" = "#CC9966"),
                     labels = c("Tree" = "Apple flowers", "Ground" = "Dandelions")) +
   scale_x_continuous(breaks = seq(min(newdata$DOY), max(newdata$DOY), by = 1)) +
-  ylim(0,5)
+  ylim(0,10.2)
 
 
 ggsave("Figures/VisitsDOY.png", plot = VisitsDOY, width = 10, height = 6, dpi = 300)
@@ -212,7 +211,7 @@ ggsave("Figures/VisitsDOY.png", plot = VisitsDOY, width = 10, height = 6, dpi = 
 
 
 
-# Q2: Are some taxanomic groups only attracted to apple or dandelions --------
+# Q3: Are some taxanomic groups only attracted to apple or dandelions --------
 
 SpeciesVisit <- Visits4_summarised %>% 
   ggplot(aes(y = Total_Count, x = Pollinator, fill = Type)) + 
@@ -247,7 +246,7 @@ GenusModel2 <- ggplot(emm_df, aes(x = Pollinator, y = response, fill = Where)) +
   geom_errorbar(aes(ymin = asymp.LCL, ymax = asymp.UCL),
                 position = position_dodge(width = 0.8), width = 0.2) +
   labs(
-    y = "Predicted number of pollinator visits per flower",
+    y = "Predicted number of pollinator visits per tree",
     x = "",
     fill = "Pollinator"
   ) +
