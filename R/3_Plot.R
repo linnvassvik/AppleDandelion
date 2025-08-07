@@ -204,7 +204,7 @@ VisitsDOY <- ggplot(newdata, aes(x = DOY, y = fit, color = Where, fill = Where))
   ylim(0,10.2)
 
 
-ggsave("Figures/VisitsDOY.png", plot = VisitsDOY, width = 10, height = 6, dpi = 300)
+ggsave("Figures/VisitsDOY.png", plot = VisitsDOY, width = 10, height = 8, dpi = 300)
 
 
 
