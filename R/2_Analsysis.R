@@ -20,8 +20,7 @@ summary(OneModel2)
 
 
 
-OneModel3 <- aov(NOpen ~ Where,
-                     data = IntegrationModel_2)
+OneModel3 <- aov(NOpen ~ Where, data = IntegrationModel_2)
 
 summary(OneModel3)
 emm <- emmeans(OneModel3, ~ Where)

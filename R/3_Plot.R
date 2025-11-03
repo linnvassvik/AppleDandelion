@@ -9,136 +9,8 @@ library(patchwork)
 library(ggforce)
 
 
-# Q1: Are there a difference in visitation rate between bees to different flowers -----------------------------------
 
-
-################ Differences in visitation rate between pollinator groups
-
-
-# PlotComp3 <- ggpredict(OneModel2, terms = c("Pollinator", "Where")) %>% 
-#   rename(Where = group, Pollinator = x) %>% 
-#   as.data.frame()
-# 
-# IntegrationDiscovery <- IntegrationModel_2 %>% filter(Where == "Discovery")
-# PlotComp3Discovery <- PlotComp3 %>% filter(Where == "Discovery")  
-# 
-# MowedPlot <- ggplot() + 
-#   geom_sina(data = IntegrationDiscovery,
-#             aes(x = Pollinator, y = N_visits/NOpen, fill = Pollinator, color = Pollinator)) +
-#   geom_violin(data = IntegrationDiscovery,
-#               aes(x = Pollinator, y = N_visits/NOpen, fill = Pollinator, color = Pollinator),
-#               alpha = 0.5, width = 1.1) +  
-#   geom_pointrange(data = PlotComp3Discovery,
-#                   aes(x = Pollinator, y = predicted,
-#                       ymin = conf.low,
-#                       ymax = conf.high),
-#                   color = "black",
-#                   size = 0.8) +
-#   scale_fill_manual(values = c("Honeybee" = "#800026", "Bumblebee" = "#fd8d3c", "Solitary" = "#fed976"), 
-#                     labels = c("Honeybee" = "Honeybee", "Bumblebee" = "Bumblebee", "Solitary" = "Solitary bee"),
-#                     breaks = c("Honeybee", "Bumblebee", "Solitary")) +
-#   scale_color_manual(values = c("Honeybee" = "#800026", "Bumblebee" = "#fd8d3c", "Solitary" = "#fed976"), 
-#                      labels = c("Honeybee" = "Honeybee", "Bumblebee" = "Bumblebee", "Solitary" = "Solitary bee"),
-#                      breaks = c("Honeybee", "Bumblebee", "Solitary")) +
-#   labs(y = "", x = "", fill = "", color = "", title = "c) Mowed apple orchards") +
-#   scale_x_discrete(limits = c("Honeybee", "Bumblebee", "Solitary")) + 
-#   theme_minimal() +
-#   theme(legend.position = "top", 
-#         axis.text.x = element_blank(),
-#         axis.text.y = element_text(size = 20),
-#         axis.title = element_text(size = 17),
-#         plot.title = element_text(face = "bold", size = 22),
-#         legend.text = element_text(size = 16),   
-#         legend.title = element_text(size = 18)) +
-#   ylim(0,0.9)
-# 
-# 
-# 
-# IntegrationSummerred <- IntegrationModel_2 %>% filter(Where == "Summerred")
-# PlotComp3Summerred <- PlotComp3 %>% filter(Where == "Summerred")  # x is Where in ggpredict output
-# 
-# 
-# UnmowedPlot <- ggplot() + 
-#   geom_sina(data = IntegrationSummerred,
-#             aes(x = Pollinator, y = N_visits/NOpen, fill = Pollinator, color = Pollinator)) +
-#   geom_violin(data = IntegrationSummerred,
-#               aes(x = Pollinator, y = N_visits/NOpen, fill = Pollinator, color = Pollinator),
-#               alpha = 0.5, width = 1.1) +  
-#   geom_pointrange(data = PlotComp3Summerred,
-#                   aes(x = Pollinator, y = predicted,
-#                       ymin = conf.low,
-#                       ymax = conf.high),
-#                   color = "black",
-#                   size = 0.8) +
-#   scale_fill_manual(values = c("Honeybee" = "#bd0026", "Bumblebee" = "#fd8d3c", "Solitary" = "#fed976"), 
-#                     labels = c("Honeybee" = "Honeybee", "Bumblebee" = "Bumblebee", "Solitary" = "Solitary bee"),
-#                     breaks = c("Honeybee", "Bumblebee", "Solitary")) +
-#   scale_color_manual(values = c("Honeybee" = "#bd0026", "Bumblebee" = "#fd8d3c", "Solitary" = "#fed976"), 
-#                      labels = c("Honeybee" = "Honeybee", "Bumblebee" = "Bumblebee", "Solitary" = "Solitary bee"),
-#                      breaks = c("Honeybee", "Bumblebee", "Solitary")) +
-#   labs(y = "", x = "", fill = "", color = "", title = "b) Unmowed apple orchards") +
-#   scale_x_discrete(limits = c("Honeybee", "Bumblebee", "Solitary")) + 
-#   theme_minimal() +
-#   theme(legend.position = "top", 
-#         axis.text = element_text(size = 20),
-#         axis.text.x = element_blank(),
-#         axis.title = element_text(size = 17),
-#         plot.title = element_text(face = "bold", size = 22),
-#         legend.text = element_text(size = 16),   # increase legend labels
-#         legend.title = element_text(size = 18)) +
-#   ylim(0,0.9)
-# 
-# 
-# 
-# 
-#   
-# IntegrationDandelion <- IntegrationModel_2 %>% filter(Where == "Dandelion")
-# PlotComp3Dandelion <- PlotComp3 %>% filter(Where == "Dandelion")  # x is Where in ggpredict output
-# 
-# 
-# DandelionPlot <- ggplot() + 
-#   geom_sina(data = IntegrationDandelion,
-#             aes(x = Pollinator, y = N_visits/NOpen, fill = Pollinator, color = Pollinator)) +
-#   geom_violin(data = IntegrationDandelion,
-#               aes(x = Pollinator, y = N_visits/NOpen, fill = Pollinator, color = Pollinator),
-#               alpha = 0.5, width = 1.1) +  
-#   geom_pointrange(data = PlotComp3Dandelion,
-#                   aes(x = Pollinator, y = predicted,
-#                       ymin = conf.low,
-#                       ymax = conf.high),
-#                   color = "black",
-#                   size = 0.8) +
-#   scale_fill_manual(values = c("Honeybee" = "#bd0026", "Bumblebee" = "#fd8d3c", "Solitary" = "#fed976"), 
-#                     labels = c("Honeybee" = "Honeybee", "Bumblebee" = "Bumblebee", "Solitary" = "Solitary bee"),
-#                     breaks = c("Honeybee", "Bumblebee", "Solitary")) +
-#   scale_color_manual(values = c("Honeybee" = "#bd0026", "Bumblebee" = "#fd8d3c", "Solitary" = "#fed976"), 
-#                      labels = c("Honeybee" = "Honeybee", "Bumblebee" = "Bumblebee", "Solitary" = "Solitary bee"),
-#                      breaks = c("Honeybee", "Bumblebee", "Solitary")) +
-#   labs(y = "Visitation frequency", x = "", fill = "", color = "", title = "a) Dandelion understory") +
-#   scale_x_discrete(limits = c("Honeybee", "Bumblebee", "Solitary")) + 
-#   theme_minimal() +
-#   theme(legend.position = "top", 
-#         axis.text = element_text(size = 20),
-#         axis.text.x = element_blank(),
-#         axis.title = element_text(size = 17),
-#         plot.title = element_text(face = "bold", size = 22),
-#         legend.text = element_text(size = 16),   # increase legend labels
-#         legend.title = element_text(size = 18)) +
-#   ylim(0,0.9)
-#   
-#   
-#   
-#   
-# VisitationDiff <- ggarrange(DandelionPlot, UnmowedPlot, MowedPlot, nrow = 1, common.legend = TRUE, legend = "bottom")
-# ggsave(VisitationDiff, filename = "Figures/VisitationDiff.jpeg", height = 10, width = 14) 
-# 
-# 
-# 
-# 
-# 
-
-
-# Q2: Competition or facilitation between flowers in apple orchards -------
+# Q2 Competition or facilitation between flowers in apple orchards -------
 
 ### KONKURRANSE FRA EPLEBLOMSTER PÅ LØVETANNBESØK
 PlotComp1 <- ggpredict(OneModel2, terms = c("CompApple", "Pollinator"), 
@@ -259,38 +131,6 @@ PhenologyCombined_plot <- PhenologyCombined %>%
 PhenologyAll <- bind_rows(PhenologyCombined_plot, Phenology24_plot)
 
 
-# PhenoDOY_plot <- PhenologyAll %>%
-#   filter(DOY >=135 & DOY <= 142) %>% 
-#   ggplot(aes(x = DOY, y = ((NOpen/NTot)*100), fill = Where, color = Where)) +
-#   #geom_point(position = position_jitter(width = 0.2, height = 2), alpha = 0.5) +
-#   geom_smooth(method = "gam",
-#               formula = y ~ s(x, k = 5),
-#               method.args = list(family = gaussian(link = "identity")),
-#               fullrange = TRUE,
-#               alpha = 0.3, se = FALSE) +
-#   scale_color_manual(name = "",
-#                    values = c("Summerred" = "#7F646C", "Dandelion" = "#CC9966", "Discovery" = "#669999"),
-#                    labels = c("Summerred" = "Apple flowers unmowed", 
-#                               "Dandelion" = "Dandelions understory",
-#                               "Discovery" = "Apple flowers mowed"),
-#                    breaks = c("Dandelion", "Summerred", "Discovery")) +
-#   scale_fill_manual(name = "",
-#                     values = c("Summerred" = "#7F646C", "Dandelion" = "#CC9966", "Discovery" = "#669999"),
-#                     labels = c("Summerred" = "Apple flowers unmowed", 
-#                                "Dandelion" = "Dandelions understory",
-#                                "Discovery" = "Apple flowers mowed"),
-#                     breaks = c("Dandelion", "Summerred", "Discovery")) +
-#   labs(x = "Day of the year (DOY)", y = "Open flowers (%)") +
-#   theme_minimal(base_size = 16) +
-#   coord_cartesian(xlim = c(135, 142), clip = "on") +
-#   scale_y_continuous(limits = c(0, 100)) +
-#   theme(legend.position = "none")
-  
-  
-
-
-
-
 
 
 PhenoDOY_plot <- PhenologyAll %>%
@@ -341,7 +181,6 @@ PhenologyAll %>%
   summarise(n_flowers = sum(NOpen))
 
 IntegrationModel_2 %>% 
-  filter(DOY >=135 & DOY <= 142) %>% 
   group_by(Observation) %>% 
   summarise(n_visits = sum(N_visits))
   
