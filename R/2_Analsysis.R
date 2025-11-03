@@ -5,179 +5,35 @@ source("R/1_ImportData.R")
 library(glmmTMB)
 library(performance)
 library(emmeans)
-library(gtsummary)
+library(DHARMa)
+
+
+# One big integration model for all research questions --------------------
+
+OneModel2 <- glmmTMB(N_visits ~ (Where * Pollinator) + (CompApple * Pollinator) + CompDandelion + Observation + (1|Location:Tree) + (1|DOY),
+                    offset = log(NOpen), 
+                    family = nbinom1,
+                    data = IntegrationModel_2)
+
+
+summary(OneModel2) 
 
 
 
+OneModel3 <- aov(NOpen ~ Where,
+                     data = IntegrationModel_2)
 
-# Q1: Do pollinators prefer dandelions over apple? ------------------------
-
-#Difference in flowers:
-
-ModelFlower <- glmmTMB(NOpen ~ Where * Location,
-                       family = nbinom2,
-                       data = ManualVis_per_flower)
-
-
-
-summary(ModelFlower)
-tbl_regression(ModelFlower)
-
-
-emm <- emmeans(ModelFlower, ~ Where * Location)
-pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
-summary(pairwise_comparisons)
-tbl_regression(pairwise_comparisons)
-
-#Difference in visits/flower during apple flowering
-
-ManualObsModel1a <- glmmTMB(N_visits ~ Where + Location,
-                            offset = log(NOpen),
-                            family = nbinom2,
-                            data = ManualVis_per_flower)
-
-
-summary(ManualObsModel1a)
-
-emm <- emmeans(ManualObsModel1a, ~ Location)
+summary(OneModel3)
+emm <- emmeans(OneModel3, ~ Where)
 pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
 summary(pairwise_comparisons)
 
-
-
-## DOY 
-
-# Make DOY a smaller number
-# ManualVis_per_flower <- ManualVis_per_flower %>%
-#   mutate(DOY_c = scale(DOY, center = TRUE, scale = FALSE))  
-
-# ManualObsModel3c <- glmmTMB(N_visits ~ Where * (DOY_c + I(DOY_c^2)) + (1 | Location),
-#                             offset = log(NOpen),
-#                             family = nbinom2,
-#                             data = ManualVis_per_flower)
-
-
-
-ManualObsModel3b <- glmmTMB(N_visits ~ Where * DOY,
-                           offset = log(NOpen),
-                           family = nbinom2,
-                           data = ManualVis_per_flower)
-
-
-
-summary(ManualObsModel3b)
-check_model(ManualObsModel3b)
-
-
-emm <- emmeans(ManualObsModel3b, ~ pairwise ~ Where | DOY, at = list(DOY = 135:142))
-pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
-summary(pairwise_comparisons)
-
-
-
-
-# Q3: Are some taxanomic groups only attracted to apple or dandelions --------
-
-#Test for different groups of pollinators (bumblebees, honeybees and solitary bees), not enough data on species
-ManualObsModel2b <- glmmTMB(N_visits ~ Where * Pollinator + (1 | Location),
-                            offset = log(NOpen),
-                            family = nbinom2,
-                            data = ManualVis_per_flower)
-
-summary(ManualObsModel2b)
-
-emm <- emmeans(ManualObsModel2b, ~ Where * Pollinator, at = list(NOpen = 1), type = "response")
-pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
-summary(pairwise_comparisons)
-
+#Model check
+# simres <- simulateResiduals(OneModel)
+# testDispersion(simres)
+# check_model(OneModel)
 # 
-# ManualObsModel2c <- glmmTMB(N_visits ~ Location * Pollinator,
-#                             offset = log(NOpen),
-#                             family = nbinom2,
-#                             data = ManualVis_per_flower)
+# testZeroInflation(simres)
+# plot(simres) #DHARMa supports nbinom1 for underdispersion
 # 
-# 
-# 
-# 
-# emm <- emmeans(ManualObsModel2c, ~ Location * Pollinator)
-# pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
-# summary(pairwise_comparisons)
-# # 
-# 
-
-# Q2: What effect does mowing have on pollinator visitations? -------------
-
-Model2b <- glmmTMB(N_visits ~ Apple_variety + Taxonomic_group + (1 | Location),
-                  offset = log(Total_Open),
-                  family = nbinom2,
-                  data = Visits_per_flower)
-
-
-summary(Model2b)
-check_model(Model2)
-
-emm <- emmeans(Model2b, ~ Taxonomic_group)
-pairwise_comparisons <- contrast(emm, method = "pairwise", adjust = "tukey")
-summary(pairwise_comparisons)
-
-
-# General stats -----------------------------------------------------------
-
-ManualVis_per_flower %>% 
-  group_by(Where, Pollinator) %>% 
-  summarise(Total_visits = sum(N_visits)) %>% 
-  ungroup()
-
-ManualVis_per_flower %>% 
-  group_by(Where, Pollinator) %>% 
-  summarise(Total_flowers = sum(NOpen)) %>% 
-  ungroup()
-
-
-ManualVis_per_flower %>% 
-  group_by(Where, Location) %>% 
-  summarise(Total_flowers = sum(NOpen)) %>% 
-  ungroup()
-
-
-ManualVis_per_flower %>% 
-  group_by(Location, Pollinator) %>% 
-  summarise(Total_visits = sum(N_visits)) %>% 
-  ungroup()
-
-
-
-
-# Additional --------------------------------------------------------------
-
-# VisitsDOY <- glmmTMB(n ~ DOY * Taxanomic_group,
-#                       family = nbinom2,
-#                       data = Visits24_DOY)
-# 
-# VisitsDOY2 <- glmmTMB(n ~ DOY * Taxanomic_group + (1 | Location),
-#                      family = nbinom2,
-#                      data = Visits24_DOY)
-# 
-# summary(VisitsDOY2)
-# check_model(VisitsDOY)
-# 
-# 
-# VisitsTime <- glmmTMB(n ~ Hour * Taxanomic_group + (1 | Location),
-#                       family = nbinom2,
-#                       data = Visits24_Time)
-# 
-# summary(VisitsTime)
-# check_model(VisitsTime)
-# 
-# 
-# 
-# VisitsTemp <- glmmTMB(n ~ Temperature * Taxanomic_group + (1 | Location),
-#                       family = nbinom2,
-#                       data = Visits24_Temp)
-# 
-# 
-# 
-# summary(VisitsTemp)
-# check_model(VisitsTemp)
-
 
