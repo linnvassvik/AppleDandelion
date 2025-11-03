@@ -2,9 +2,10 @@
 
 #Packages
 library(readxl)
-library(tidyverse) #including ggplot2
+library(tidyverse) 
 library(lubridate)
 library(hms)
+library(tidylog)
 
 
 
@@ -23,7 +24,6 @@ PhenologyDandelion2 <- read_excel("Data/Phenology_SRandDisc.xlsx") %>%
   rename(NWithered = '#Withered') %>% 
   rename(POpen = '%Open')
 
-
 PhenoDand <- PhenologyDandelion2 %>% 
   filter(Where == 'Ground') %>% 
   select(-Branch, -Time, -Date, -POpen)
@@ -36,124 +36,64 @@ PhenoApple <- PhenologyDandelion2 %>%
             NWithered = sum(NWithered, na.rm = TRUE)) %>%
   ungroup() 
 
-PhenologyCombined <- bind_rows(PhenoApple, PhenoDand)
-
-PhenologyDandelion <- PhenologyCombined %>% 
+PhenologyCombined <- bind_rows(PhenoApple, PhenoDand) %>% 
   mutate(NTot = (NBuds + NOpen + NWithered)) %>% 
-  mutate(Percentage = (NOpen / NTot) * 100)
+  mutate(Percentage = (NOpen / NTot) * 100) %>%
+  select(-Apple_variety)
 
 
 #Pollinator visits
 
-Visits <- read_excel("Data/Visits2.xlsx")  
-  
-
-Visits2 <- Visits %>% 
+Visits <- read_excel("Data/Visits2.xlsx") %>% 
   select(-Comment, -Weather) %>% 
   mutate_all(~replace(., is.na(.), 0)) %>% 
   mutate(Date = dmy(Date)) %>% 
   filter(row_number() != 445) %>% 
-  mutate(DOY = yday(Date))
+  mutate(DOY = yday(Date)) 
 
-Visits3a <- Visits2 %>% 
+Visits_group <- Visits %>% 
   select(-Other, -'Andrena cineraria', -'Andrena haemorrhoa', -'Bombus pratorum', -'Andrena sp', -'Bombus sensu stricto', -'Bombus hypnorum', -'Lasioglossum sp', -'Andrena scotica', -'Andrena nigroaena', - Hoverfly, -Fly) 
 
-Visits3 <- Visits3a %>% 
+Visits_pivot <- Visits_group %>% 
   pivot_longer(cols = Honeybee:Solitarybee, names_to = "Pollinator", values_to = "Count")
 
 
-#Species data
-Visits4 <- Visits2 %>% 
-  select(-Bumblebee, -Solitarybee, -Hoverfly, -Fly, -Other, -DOY) %>% 
-  pivot_longer(cols = Honeybee:'Andrena nigroaena', names_to = "Pollinator", values_to = "Count")
-
-Visits4_summarised <- Visits4 %>%
-  group_by(Pollinator, Type) %>%
-  summarize(Total_Count = sum(Count)) %>%
-  ungroup() %>%
-  mutate(Percent = (Total_Count / sum(Total_Count)) * 100) %>% 
-  mutate(Pollinator = if_else(Pollinator == "Honeybee", "Apis mellifera", Pollinator))
-
-
-Visits4_summarised <- Visits4_summarised %>% 
-  mutate(Pollinator = as.character(Pollinator))
-
 
 #Dataframes to test difference in visits/flower on dandelions and apple during apple flowering
-PhenologyDandelion_New <- PhenologyDandelion %>%
-  select(-Apple_variety)
-
-
-Visits3_New <- Visits3 %>% 
+Visits_group_DOY <- Visits_pivot %>% 
   select(-Time, -ID, -Date) %>%
   rename(Where = Type) %>% 
-  mutate(Tree = as.character(Tree))
+  mutate(Tree = as.character(Tree)) %>% 
+  group_by(Where, Location, Tree, DOY, Pollinator) %>%
+  summarise(Count = sum(Count, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = "Pollinator", values_from = "Count")
 
-Merged_data2 <- PhenologyDandelion_New %>%
-  inner_join(Visits3_New, by = c("Tree", "Location", "DOY", "Where"))
+#Add missing pheology for dandelions on DPY 135, just used same values as for DOY 136 since DOY 135 is the first day of revordings
+new_rows <- expand.grid(Location = "Berle", Tree = "2", DOY = "135",
+  Where = "Dandelion", Pollinator = c("Bumblebee", "Honeybee", "Solitary"),
+  stringsAsFactors = FALSE) %>%
+  mutate(N_visits = 0, NOpen = 18, Observation = "manual")
 
-ManualVis_per_flower <- Merged_data2 %>%
+
+ManualVis_per_flower  <- PhenologyCombined %>%
+  left_join(Visits_group_DOY, by = c("Tree", "Location", "DOY", "Where")) %>% 
+  mutate(Bumblebee = replace_na(Bumblebee, 0),
+         Honeybee = replace_na(Honeybee, 0),
+         Solitarybee = replace_na(Solitarybee, 0)) %>% 
+  pivot_longer(cols = c(Bumblebee, Honeybee, Solitarybee), names_to = "Pollinator", values_to = "Count") %>%
   filter(DOY >= 135 & DOY <= 142) %>%
   group_by(Location, Tree, DOY, Where, Pollinator) %>%
-  summarise(
-    N_visits = sum(Count, na.rm = TRUE),
-    NOpen = first(NOpen),  # optional: include if you want flower counts
-    .groups = "drop"
-  )
+  summarise(N_visits = sum(Count, na.rm = TRUE),
+            NOpen = first(NOpen), .groups = "drop") %>% 
+  mutate(Observation = "manual") %>% 
+  mutate(Where = if_else(Where == "Tree", "Summerred", Where)) %>% 
+  mutate(Where = if_else(Where == "Ground", "Dandelion", Where)) %>%
+  mutate(Pollinator = if_else(Pollinator == "Solitarybee", "Solitary", Pollinator),
+         DOY = as.factor(DOY)) %>% 
+  bind_rows(new_rows) %>%
+  arrange(Location, Tree, as.numeric(as.character(DOY)), Where, Pollinator) %>% 
+  mutate(DOY = as.factor(DOY))
 
-
-
-## Include time
-
-
-ManualVis_per_flower %>%
-  distinct(Location, Tree, Where, DOY, NOpen) %>%
-  group_by(Location, Where) %>%
-  summarise(total_NOpen = sum(NOpen, na.rm = TRUE), .groups = "drop")
-
-ManualVis_per_flower %>%
-  distinct(Location, Tree, Where, DOY, N_visits) %>%
-  group_by(Location, Where) %>%
-  summarise(total_N_visits = sum(N_visits, na.rm = TRUE), .groups = "drop")
-
-
-
-#Dataframe to look at differences in pollinator visits before and during apple flowering
-# Filter data for Before apple flowering (DOY 132-134)
-Visits3_filtered1 <- Visits3 %>%
-  filter(DOY >= 132 & DOY <= 134)
-
-# Filter data for After apple flowering (DOY 135-142)
-Visits3_filtered2 <- Visits3 %>%
-  filter(DOY >= 135 & DOY <= 142)
-
-# Rearrange order of Pollinator
-Visits3_filtered1 <- Visits3_filtered1 %>%
-  mutate(Pollinator = factor(Pollinator, levels = c("Honeybee", "Solitarybee", "Bumblebee", "Hoverfly", "Fly")))
-
-Visits3_filtered2 <- Visits3_filtered2 %>%
-  mutate(Pollinator = factor(Pollinator, levels = c("Honeybee", "Solitarybee", "Bumblebee", "Hoverfly", "Fly")))
-
-# Summarize data to get total Count for each Pollinator and Type
-Visits3_summarized1 <- Visits3_filtered1 %>%
-  group_by(Pollinator, Type) %>%
-  summarize(Total_Count = sum(Count)) %>%
-  ungroup() %>%
-  mutate(Percent = (Total_Count / sum(Total_Count)) * 100,
-         Period = "Before apple flowering")
-
-Visits3_summarized2 <- Visits3_filtered2 %>%
-  group_by(Pollinator, Type) %>%
-  summarize(Total_Count = sum(Count)) %>%
-  ungroup() %>%
-  mutate(Percent = (Total_Count / sum(Total_Count)) * 100,
-         Period = "After apple flowering")
-
-# Combine summarized data for plotting
-Visits3_combined <- bind_rows(Visits3_summarized1, Visits3_summarized2)
-
-Visits3_combined <- Visits3_combined %>%
-  mutate(Period = factor(Period, levels = c("Before apple flowering", "After apple flowering")))
 
 
 # Camera observations on apples with mowing treatments --------------------
@@ -161,36 +101,20 @@ Visits3_combined <- Visits3_combined %>%
 Visits24 <- read_excel("Data/PollinatorVisitation_Mowing project_2024.xlsx") %>% 
   filter(Taxanomic_group != 'Hoverfly') %>% 
   filter(Taxanomic_group != 'Butterfly') %>% 
-  select(c(-Comments, -Comments_picture,)) %>%
-  mutate(Time = as_hms(Time)) %>% 
-  mutate(DOY = dmy(Date),DOY = yday(DOY)) %>% 
-  mutate(Tree = as.character(Tree)) 
-
-
-#From 2023 where they mowed both discovery and summerred
-# Visits23 <- read_excel("Data/PolliObs_2023.xlsx") %>% 
-#   filter(Taxanomic_group != 'Hoverfly') %>% 
-#   filter(Taxanomic_group != 'Butterfly') %>% 
-#   filter(Taxanomic_group != 'Fly') %>% 
-#   filter(Location != 'Hoyen') %>% 
-#   filter(Apple_variety != 'Aroma') %>% 
-#   select(c(-Cluster_number, -Groups, -Comments, -Comments_picture)) %>%
-#   mutate(Time = as_hms(Time)) %>% 
-#   mutate(DOY = dmy(Date),DOY = yday(DOY))
-
-
-Visits24 %>%
-  group_by(Tree, Location, Apple_variety, Taxanomic_group, DOY) %>%
-  summarise(visits = n(), .groups = "drop")
-
-Visits24 %>%
-  group_by(Location, Apple_variety) %>%
-  summarise(visits = n(), .groups = "drop")
-
-# Visits23 %>%
-#   group_by(Location, Apple_variety) %>%
-#   summarise(visits = n(), .groups = "drop")
-
+  select(-Comments, -Comments_picture) %>%
+  mutate(Time = as_hms(Time),
+         DOY = dmy(Date),
+         DOY = yday(DOY),
+         Tree = as.character(Tree),
+         Count = if_else(is.na(Taxanomic_group), 0, 1)) %>% 
+  group_by(Location, Tree, Apple_variety, Temperature, Date, Time, Foraging, DOY, Taxanomic_group) %>%
+  summarise(Count = sum(Count), .groups = "drop") %>%
+  pivot_wider(names_from = "Taxanomic_group", values_from = "Count") %>%
+  mutate(Bumblebee = if_else(is.na(Bumblebee), 0, if_else(Bumblebee > 0, 1, 0)),
+         Honeybee  = if_else(is.na(Honeybee), 0, if_else(Honeybee > 0, 1, 0)),
+         Solitary  = if_else(is.na(Solitary), 0, if_else(Solitary > 0, 1, 0)),
+         Unknown   = if_else(is.na(Unknown), 0, if_else(Unknown > 0, 1, 0))) %>% 
+  select(-Time, -Date, -Foraging, -Temperature)
 
 
 #Import phenology data, but filtered for only discovery and summerred (mowing treatments)
@@ -200,84 +124,73 @@ Phenology24 <- read_excel("Data/Phenology_SRandDisc.xlsx") %>%
   filter(Where == 'Tree') %>% 
   mutate(Time = as_hms(Time)) %>% 
   mutate(DOY = dmy(Date),DOY = yday(DOY)) %>% 
-  rename(Apple_variety = Species)
-
-
-Phenology24 <- Phenology24 %>%
+  rename(Apple_variety = Species) %>%
   group_by(Location, Apple_variety, Tree, DOY) %>%
   summarise(Total_Buds = sum(`#Buds`, na.rm = TRUE),
             Total_Open = sum(`#Open`, na.rm = TRUE),
-            Total_Withered = sum(`#Withered`, na.rm = TRUE),
-            Avg_Percent_Open = mean(`%Open`, na.rm = TRUE)) %>%
+            Total_Withered = sum(`#Withered`, na.rm = TRUE)) %>%
+  ungroup()
+
+
+Merged_camera <- Phenology24 %>%
+  full_join(Visits24, by = c("Tree", "Location", "Apple_variety", "DOY")) %>%
+  group_by(Location, Apple_variety, Tree) %>% 
+  mutate(Total_Open = approx(DOY, Total_Open, DOY, rule = 2, ties = mean)$y,
+         Total_Buds = approx(DOY, Total_Buds, DOY, rule = 2, ties = mean)$y,
+         Total_Withered = approx(DOY, Total_Withered, DOY, rule = 2,ties = mean)$y,
+         Bumblebee = replace_na(Bumblebee, 0),
+         Honeybee  = replace_na(Honeybee, 0),
+         Solitary  = replace_na(Solitary, 0),
+         Unknown   = replace_na(Unknown, 0)) %>%
   ungroup()
 
 
 
-#Merge phenology and visits
+CameraVis_per_flower <- Merged_camera %>% 
+  pivot_longer(cols = c(Bumblebee, Honeybee, Solitary, Unknown), 
+               names_to = "Pollinator", values_to = "Count") %>%  
+  group_by(Location, Apple_variety, Tree, DOY, Pollinator, Total_Open) %>% 
+  summarise(N_visits = sum(Count, na.rm = TRUE)) %>%
+  filter(DOY >= 135 & DOY <= 142) %>% 
+  mutate(Observation = "camera") %>% 
+  rename(NOpen = "Total_Open", Where = "Apple_variety") %>% 
+  mutate(DOY = as.factor(DOY))
 
-Merged_data <- Phenology24 %>%
-  inner_join(Visits24, by = c("Tree", "Location", "Apple_variety", "DOY"))
 
-#Get visits/flower for each taxanomic group, day, location, variety and tree
 
-Visits_per_flower <- Merged_data %>%
-  group_by(Location, Apple_variety, Tree, DOY, Taxanomic_group) %>%
-  summarise(
-    N_visits = n(),
-    Total_Open = first(Total_Open), 
-    Visits_per_flower = N_visits / Total_Open) %>%
+# Combinde camera and manual ----------------------------------------------
+IntegrationModel <- bind_rows(ManualVis_per_flower, CameraVis_per_flower) %>%
+  group_by(Location, Tree, DOY) %>%
+  mutate(NOpen_Summerred = NOpen[Where == "Summerred"][1],
+         NOpen_Discovery = NOpen[Where == "Discovery"][1],
+         NOpen_Dandelion = NOpen[Where == "Dandelion"][1], 
+         CompApple = case_when(Observation == "manual" & Where == "Dandelion" ~ NOpen[Where == "Summerred"][1],
+                               Observation == "manual" & Where %in% c("Summerred", "Discovery") ~ 0,
+                               TRUE ~ NA_real_),
+         CompDandelion = case_when((Observation == "manual" | Observation == "camera") & Where == "Summerred" ~ NOpen_Dandelion,
+                                   (Observation == "manual" | Observation == "camera") & Where == "Discovery" ~ 0,
+                                   Observation == "manual" & Where == "Dandelion" ~ 0,
+                                   TRUE ~ NA_real_)) %>%
   ungroup() %>% 
-  rename(Taxonomic_group = Taxanomic_group)
-
-
-
-
-# Other -------------------------------------------------------------------
-
-#Reuploading visits as a csv to get time correct
-
-Visits_other <- read.csv("Data/Visits2.csv")
-  
-  
-Visits2_other <- Visits_other %>% 
-  select(-Comment, -Weather) %>% 
-  mutate_all(~replace(., is.na(.), 0)) %>% 
-  mutate(Date = dmy(Date)) %>% 
-  filter(row_number() != 445) %>% 
-  mutate(DOY = yday(Date))
-
-Visits3a_other <- Visits2_other %>% 
-  select(-Other, -'Andrena.cineraria', -'Andrena.haemorrhoa', -'Bombus.pratorum', -'Andrena.sp', -'Bombus.sensu.stricto', -'Bombus.hypnorum', -'Lasioglossum.sp', -'Andrena.scotica', -'Andrena.nigroaena', - Hoverfly, -Fly) 
-
-Visits3_other <- Visits3a_other %>% 
-  pivot_longer(cols = Honeybee:Solitarybee, names_to = "Pollinator", values_to = "Count") %>% 
-  mutate(Time_parsed = as.POSIXct(paste("2000-01-01", Time), format = "%Y-%m-%d %H:%M"), Time_rounded = format(round_date(Time_parsed, unit = "hour"), "%H:%M")) %>% 
-  select(-Time_parsed)
-
-
-Visits24_plot <- Visits24 %>% 
-  mutate(Time_parsed = as.POSIXct(paste("2000-01-01", Time), format = "%Y-%m-%d %H:%M"), Time_rounded = format(round_date(Time_parsed, unit = "hour"), "%H:%M")) %>% 
-  select(-Time_parsed)
-
-
-
-Visits24_DOY <- Visits24_plot %>% 
-  group_by(Tree, Location, Apple_variety, DOY, Taxanomic_group) %>%
-  summarise(n = n(), .groups = "drop") %>% 
-  filter(Taxanomic_group != 'Unknown')
+  filter(!(Location == "Høyen" & Observation == "camera"))
   
 
+#Get missing values for DOY138 interpolated from other days
+DOY138values <- IntegrationModel %>%
+  filter(Observation == "manual", Where == "Summerred") %>%
+  group_by(Location, Tree, Pollinator) %>%
+  arrange(as.numeric(as.character(DOY))) %>%
+  summarise(NOpen_Dandelion_138 = approx(x = as.numeric(as.character(DOY)), y = NOpen_Dandelion, xout = 138)$y, .groups = "drop")
 
 
-Visits24_Time <- Visits24_plot %>%
-  group_by(Tree, Location, Apple_variety, Time_rounded, Taxanomic_group) %>%
-  summarise(n = n(), .groups = "drop") %>% 
-  mutate(Hour = hour(hm(Time_rounded))) %>% 
-  filter(Taxanomic_group != 'Unknown')
+
+#Import IntegrationModel with DOY138
+IntegrationModel_2 <- read_excel("Excel/IntegrationModel_wDOY138.xlsx") %>% 
+  mutate(CompApple = replace_na(CompApple, 0),
+         DOY = as.factor(DOY)) 
 
 
+IntegrationModel_2 <- IntegrationModel_2 %>%
+  filter(NOpen != 0) %>% 
+  filter(Pollinator != 'Unknown')
 
-Visits24_Temp <- Visits24_plot %>% 
-  group_by(Tree, Location, Apple_variety, Temperature, Taxanomic_group) %>%
-  summarise(n = n(), .groups = "drop") %>% 
-  filter(Taxanomic_group != 'Unknown')
